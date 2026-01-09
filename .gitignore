@@ -90,3 +90,6 @@ typings/
 
 # Electron-Forge
 out/
+
+# sqlite db
+/v5_retail.db

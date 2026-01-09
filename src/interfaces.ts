@@ -37,6 +37,7 @@ export interface Product {
 
 export interface IElectronAPI {
   getProducts: (personaId?: string) => Promise<Product[]>;
+  getRecommendations: (answers: Record<string, string>) => Promise<Product[]>;
 }
 
 declare global {

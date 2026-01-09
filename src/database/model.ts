@@ -1,45 +1,63 @@
-import initSqlJs from 'sql.js';
 import path from 'path';
 import fs from 'fs';
 import { app } from 'electron';
+import type initSqlJs from 'sql.js';
+import type { Database } from 'sql.js';
 
-// 1. Path determination remains the same
 const dbPath = app.isPackaged 
   ? path.join(app.getPath('userData'), 'v5_retail.db') 
   : 'v5_retail.db';
 
-let dbInstance: initSqlJs.Database; // Declare dbInstance with the correct type
+let dbInstance: Database;
 
-/**
- * Saves the in-memory database back to the physical disk.
- * Critical for 'sql.js' because changes stay in RAM until exported.
- */
-function persistToDisk(db: initSqlJs.Database) { // Accept db as an argument
-  const data = db.export(); // Use the passed db argument
+function persistToDisk(db: Database) {
+  const data = db.export();
   const buffer = Buffer.from(data);
   fs.writeFileSync(dbPath, buffer);
 }
 
 export async function setupDatabase() {
-  // Load the WASM engine
-  const SQL = await initSqlJs({
-    // Point to the local wasm file.
-    locateFile: (file) => {
-      return app.isPackaged
-        ? path.join(process.resourcesPath, file)
-        : path.join(__dirname, '../../node_modules/sql.js/dist', file);
+  console.log('Setting up database...');
+  console.log('App is packaged:', app.isPackaged);
+  console.log('Process resourcesPath:', process.resourcesPath);
+  console.log('__dirname:', __dirname);
+
+  // Dynamic import for sql.js
+  const initSqlJsModule = await import('sql.js');
+  const initSqlJsFn: typeof initSqlJs = initSqlJsModule.default;
+
+  const SQL = await initSqlJsFn({
+    locateFile: (file: string) => {
+      let wasmPath: string;
+      
+      if (app.isPackaged) {
+        // In production: WASM is in process.resourcesPath
+        wasmPath = path.join(process.resourcesPath, file);
+      } else {
+        // In development: __dirname is .vite/build, WASM is in .vite/build/sql-wasm.wasm
+        wasmPath = path.join(__dirname, file);
+      }
+      
+      console.log('Looking for WASM file at:', wasmPath);
+      console.log('WASM file exists:', fs.existsSync(wasmPath));
+      
+      if (!fs.existsSync(wasmPath)) {
+        throw new Error(`WASM file not found at: ${wasmPath}`);
+      }
+      
+      return wasmPath;
     }
   });
 
-  // Load existing data if it exists, otherwise create new
   if (fs.existsSync(dbPath)) {
+    console.log('Loading existing database from:', dbPath);
     const fileBuffer = fs.readFileSync(dbPath);
-    dbInstance = new SQL.Database(fileBuffer); // Use dbInstance consistently
-  } else { // If database file doesn't exist, create a new in-memory database
+    dbInstance = new SQL.Database(fileBuffer);
+  } else {
+    console.log('Creating new database');
     dbInstance = new SQL.Database();
   }
 
-  // 3. Create tables only if they are missing
   dbInstance.run(`
     CREATE TABLE IF NOT EXISTS personas ( 
         id TEXT PRIMARY KEY,
@@ -78,16 +96,14 @@ export async function setupDatabase() {
     );
   `);
 
-  persistToDisk(dbInstance); // Pass dbInstance to persistToDisk
-  console.log(`sql.js initialized at: ${dbPath}`);
-  return dbInstance; // Return the initialized database instance
+  persistToDisk(dbInstance);
+  console.log(`sql.js initialized successfully at: ${dbPath}`);
+  return dbInstance;
 }
 
-export function seedDatabase(db: initSqlJs.Database) { // Accept the database instance as an argument
-  // Note: sql.js does not support .pragma() via helper methods, use .run()
+export function seedDatabase(db: Database) {
   db.run('PRAGMA foreign_keys = ON');
 
-  // Insert Personas
   const personas = [
     ['gaming', 'Gaming', 'media/screensavers/gaming_helix.mp4', '#FF4500'],
     ['creator', 'Creator', 'media/screensavers/creator_helix.mp4', '#9333EA'],
@@ -99,21 +115,16 @@ export function seedDatabase(db: initSqlJs.Database) { // Accept the database in
     db.run(`INSERT OR IGNORE INTO personas (id, name, screensaver_path, theme_color) VALUES (?, ?, ?, ?)`, p);
   });
 
-  // Insert Products [cite: 14]
   const allProducts = [
-    // Gaming
     ['omen-17', 'OMEN 17', 'gaming', 'Desktop-class power in a portable form factor.'],
     ['omen-16', 'OMEN 16', 'gaming', 'The perfectly balanced engine for competitive play.'],
     ['victus-16', 'Victus 16', 'gaming', 'Serious gaming performance at an accessible value.'],
-    // Creator
     ['spectre-16', 'Spectre x360 16', 'creator', 'A 16-inch canvas for your biggest creative ideas.'],
     ['envy-16', 'Envy 16', 'creator', 'Power and precision for editing 4K video on the go.'],
     ['pavilion-plus-14-oled', 'Pavilion Plus 14 OLED', 'creator', 'Compact creator power with a stunning OLED display.'],
-    // Office
     ['elitebook-840', 'EliteBook 840 G10', 'office', 'The corporate standard for security and performance.'],
     ['probook-450', 'ProBook 450 G10', 'office', 'Essential business power for the modern professional.'],
     ['elite-x360', 'Elite x360 830', 'office', 'Premium flexibility for executive leaders.'],
-    // Student
     ['pavilion-14-std', 'Pavilion Plus 14', 'student', 'The all-day companion for lectures and late-night study.'],
     ['pavilion-x360', 'Pavilion x360 14', 'student', 'The versatile laptop for taking notes and streaming movies.'],
     ['hp-laptop-15', 'HP Laptop 15', 'student', 'Affordable, reliable, and ready for every assignment.']
@@ -123,7 +134,6 @@ export function seedDatabase(db: initSqlJs.Database) { // Accept the database in
     db.run(`INSERT OR IGNORE INTO products (id, model_name, persona_id, hero_description) VALUES (?, ?, ?, ?)`, p);
   });
 
-  // Insert Human-Centric Specs [cite: 4, 20]
   const allSpecs = [
     ['omen-17', 'Performance', 'Crush AAA titles with pro-level frame rates.', 'GiRocket'],
     ['omen-17', 'Cooling', 'Omen Tempest Cooling stays quiet during long raids.', 'FiWind'],
@@ -139,8 +149,7 @@ export function seedDatabase(db: initSqlJs.Database) { // Accept the database in
     db.run(`INSERT OR IGNORE INTO product_specs (product_id, label, human_value, icon_name) VALUES (?, ?, ?, ?)`, s);
   });
 
-  // Save changes from RAM to Disk
-  persistToDisk(db); // Pass the db argument to persistToDisk
+  persistToDisk(db);
   console.log("Database seeded successfully via sql.js");
 }
 
@@ -177,20 +186,11 @@ export interface Product {
   specs: ProductSpec[];
 }
 
-/**
- * Retrieves all products, optionally filtered by persona.
- * Aggregates related media and specs into nested arrays using JSON functions.
- * @param personaId - Optional ID of the persona to filter by.
- * @returns An array of fully-formed product objects.
- */
 export function getProducts(personaId?: string): Product[] {
   if (!dbInstance) {
     throw new Error("Database not initialized. Call setupDatabase first.");
   }
 
-  // This complex query joins products with personas and uses subqueries with JSON
-  // functions to aggregate related media and specs. This is highly efficient as
-  // it retrieves all data for all products in a single database roundtrip.
   let sql = `
     SELECT
       p.id,
@@ -248,8 +248,6 @@ export function getProducts(personaId?: string): Product[] {
   const products: Product[] = [];
   while (stmt.step()) {
     const row = stmt.getAsObject();
-    // The JSON columns are returned as strings, so we must parse them.
-    // We also handle cases where the subquery might return null (no related items).
     products.push({
       id: row.id as string,
       model_name: row.model_name as string,
@@ -265,11 +263,6 @@ export function getProducts(personaId?: string): Product[] {
   return products;
 }
 
-/**
- * Scores questionnaire answers to find the best persona and returns product recommendations.
- * @param answers - A record of question IDs and the user's selected answer value.
- * @returns An array of up to 3 recommended product objects.
- */
 export function getRecommendations(answers: Record<string, string>): Product[] {
   if (!dbInstance) {
     throw new Error("Database not initialized. Call setupDatabase first.");
@@ -282,12 +275,10 @@ export function getRecommendations(answers: Record<string, string>): Product[] {
     student: 0,
   };
 
-  // 1. Primary intent (strongest signal)
   if (answers.persona && Object.prototype.hasOwnProperty.call(scores, answers.persona)) {
     scores[answers.persona] += 10;
   }
 
-  // 2. Mobility preference
   if (answers.mobility === 'desktop') {
     scores.gaming += 2;
     scores.creator += 2;
@@ -296,7 +287,6 @@ export function getRecommendations(answers: Record<string, string>): Product[] {
     scores.student += 2;
   }
 
-  // 3. Workload intensity
   if (answers.workload === 'multitasking') {
     scores.gaming += 2;
     scores.creator += 2;
@@ -305,7 +295,6 @@ export function getRecommendations(answers: Record<string, string>): Product[] {
     scores.office += 1;
   }
 
-  // 4. Special features
   if (answers.feature === 'display') {
     scores.creator += 3;
   } else if (answers.feature === 'battery') {
@@ -315,7 +304,6 @@ export function getRecommendations(answers: Record<string, string>): Product[] {
     scores.office += 3;
   }
 
-  // Find the persona with the highest score
   let bestPersona; 
   let maxScore = -1;
   
@@ -326,9 +314,8 @@ export function getRecommendations(answers: Record<string, string>): Product[] {
     }
   }
 
-  console.log("Recommeded persona: ", bestPersona)
-  // Fetch all products for the winning persona and return up to 3
+  console.log("Recommended persona:", bestPersona);
   const allMatchingProducts = getProducts(bestPersona);
-  console.log(allMatchingProducts)
+  console.log("Recommended products:", allMatchingProducts);
   return allMatchingProducts.slice(0, 3);
 }
