@@ -36,26 +36,28 @@ function App() {
                 {/* </Link> */}
 
                 {/* SECTION 3: Product Catalog (Bottom Right 25%) */}
-                {/* <Link to="/" className="h-1/2"> */}
-                <section className="h-full p-10 flex flex-col justify-center bg-white dark:bg-black hover:bg-zinc-50 dark:hover:bg-zinc-950 transition-colors cursor-pointer group">
-                    <span className="text-helix-gaming font-bold uppercase tracking-widest text-xs mb-2">
-                        Explore All
-                    </span>
-                    <h3 className="text-4xl font-light leading-tight">
-                        Browse the <br /> full catalogue.
-                    </h3>
-                    <div className="mt-6 flex gap-2">
-                        {["Gaming", "Creator", "Office", "Student"].map((p) => (
-                            <span
-                                key={p}
-                                className="px-3 py-1 bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs rounded-full"
-                            >
-                                {p}
-                            </span>
-                        ))}
-                    </div>
-                </section>
-                {/* </Link> */}
+                <Link to="/catalog" className="h-1/2">
+                    <section className="h-full p-10 flex flex-col justify-center bg-white dark:bg-black hover:bg-zinc-50 dark:hover:bg-zinc-950 transition-colors cursor-pointer group">
+                        <span className="text-helix-gaming font-bold uppercase tracking-widest text-xs mb-2">
+                            Explore All
+                        </span>
+                        <h3 className="text-4xl font-light leading-tight">
+                            Browse the <br /> full catalogue.
+                        </h3>
+                        <div className="mt-6 flex gap-2">
+                            {["Gaming", "Creator", "Office", "Student"].map(
+                                (p) => (
+                                    <span
+                                        key={p}
+                                        className="px-3 py-1 bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs rounded-full"
+                                    >
+                                        {p}
+                                    </span>
+                                )
+                            )}
+                        </div>
+                    </section>
+                </Link>
             </div>
         </div>
     );

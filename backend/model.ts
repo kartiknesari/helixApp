@@ -2,36 +2,92 @@ import { fileURLToPath } from "node:url";
 import path from "path";
 import fs from "fs";
 import { app } from "electron";
-import { readFileSync } from "fs";
+// import { readFileSync } from "fs";
 import { createRequire } from "node:module";
+import type Database from "better-sqlite3";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Create require function for ES modules
 const require = createRequire(import.meta.url);
-const Database = require("better-sqlite3");
+let DB: typeof Database;
+try {
+    if (app.isPackaged) {
+        // Point to the unpacked location
+        const unpackedPath = path.join(
+            process.resourcesPath,
+            "app.asar.unpacked",
+            "node_modules",
+            "better-sqlite3"
+        );
+
+        console.log("Loading better-sqlite3 from:", unpackedPath);
+        DB = require(unpackedPath) as typeof Database;
+    } else {
+        DB = require("better-sqlite3") as typeof Database;
+    }
+} catch (error) {
+    console.error("Failed to load better-sqlite3:", error);
+    // Fallback to regular require
+    DB = require("better-sqlite3") as typeof Database;
+}
+
+// const DB = require("better-sqlite3") as typeof Database;
 
 const root = path.join(__dirname, "..");
-const TAG = "[better-sqlite3]";
+// const TAG = "[better-sqlite3]";
 
 // 1. Path determination
 const dbPath = app.isPackaged
     ? path.join(app.getPath("userData"), "v5_retail.db")
-    : path.join(__dirname, "../backend/database/v5_retail.db");
+    : path.join(__dirname, "../v5_retail.db");
 
 // Path to bundled seed database (COMMENTED OUT)
 // const seedDbPath = app.isPackaged
 //     ? path.join(process.resourcesPath, "seed.db")
 //     : path.join(__dirname, "../../resources/seed.db");
 
-let dbInstance: any | null = null;
+let dbInstance: Database.Database | null = null;
 
 function fetchFile(filePath: string): any[][] {
-    try {
-        const resolvedPath = app.isPackaged
-            ? path.join(process.resourcesPath, filePath)
-            : path.join(__dirname, "../backend", filePath);
+    // try {
+    //     const resolvedPath = app.isPackaged
+    //         ? path.join(process.resourcesPath, filePath)
+    //         : path.join(__dirname, "../backend", filePath);
+
+    //     console.log(`Reading JSON file from: ${resolvedPath}`);
+
+    //     if (!fs.existsSync(resolvedPath)) {
+    //         console.error(`File not found: ${resolvedPath}`);
+    //         return [];
+    //     }
+    //     // const absolutePath = path.resolve(__dirname, filePath);
+    //     const res = readFileSync(resolvedPath, "utf-8");
+    //     return JSON.parse(res);
+    // } catch (error) {
+    //     console.error(`Error in fetching file '${filePath}': `, error);
+    //     return [];
+    // }
+    /* try {
+        // Resolve relative to the project root in development
+        // or to the app resources in production
+        let resolvedPath: string;
+
+        if (app.isPackaged) {
+            // In production, check both inside asar and in extraResources
+            const asarPath = path.join(
+                process.resourcesPath,
+                "app.asar",
+                filePath
+            );
+            const extraPath = path.join(process.resourcesPath, filePath);
+
+            resolvedPath = fs.existsSync(extraPath) ? extraPath : asarPath;
+        } else {
+            // In development
+            resolvedPath = path.join(__dirname, "..", filePath);
+        }
 
         console.log(`Reading JSON file from: ${resolvedPath}`);
 
@@ -39,11 +95,39 @@ function fetchFile(filePath: string): any[][] {
             console.error(`File not found: ${resolvedPath}`);
             return [];
         }
-        const absolutePath = path.resolve(__dirname, filePath);
-        const res = readFileSync(absolutePath, "utf-8");
-        return JSON.parse(res);
+
+        const fileContent = fs.readFileSync(resolvedPath, "utf-8");
+        return JSON.parse(fileContent);
     } catch (error) {
-        console.error(`Error in fetching file '${filePath}': `, error);
+        console.error(`Error reading file ${filePath}:`, error);
+        return [];
+    } */
+    try {
+        let resolvedPath: string;
+
+        if (app.isPackaged) {
+            // In production, data files are in extraResources
+            // Path structure: resources/data/personas.json
+            resolvedPath = path.join(process.resourcesPath, filePath);
+            console.log(`[PROD] Reading JSON file from: ${resolvedPath}`);
+        } else {
+            // In development: backend/data/personas.json
+            resolvedPath = path.join(__dirname, "..", filePath);
+            console.log(`[DEV] Reading JSON file from: ${resolvedPath}`);
+        }
+
+        if (!fs.existsSync(resolvedPath)) {
+            console.error(`File not found: ${resolvedPath}`);
+            console.error(`Attempted to read: ${filePath}`);
+            console.error(`Process resources path: ${process.resourcesPath}`);
+            console.error(`__dirname: ${__dirname}`);
+            return [];
+        }
+
+        const fileContent = fs.readFileSync(resolvedPath, "utf-8");
+        return JSON.parse(fileContent);
+    } catch (error) {
+        console.error(`Error reading file ${filePath}:`, error);
         return [];
     }
 }
@@ -52,17 +136,28 @@ export function getSqlite3(
     filename = path.join(app.getPath("userData"), "better-sqlite3.sqlite3")
 ) {
     console.log("Database Filename: ", filename);
-    return (dbInstance ??= new Database(filename, {
-        // https://github.com/WiseLibs/better-sqlite3/blob/v8.5.2/lib/database.js#L36
-        // https://github.com/WiseLibs/better-sqlite3/blob/v8.5.2/lib/database.js#L50
-        nativeBinding: path.join(
-            root,
-            import.meta.env.VITE_BETTER_SQLITE3_BINDING
-        ),
-    }));
+    // return (dbInstance ??= new DB(filename, {
+    //     // https://github.com/WiseLibs/better-sqlite3/blob/v8.5.2/lib/database.js#L36
+    //     // https://github.com/WiseLibs/better-sqlite3/blob/v8.5.2/lib/database.js#L50
+    //     nativeBinding: path.join(
+    //         root,
+    //         import.meta.env.VITE_BETTER_SQLITE3_BINDING
+    //     ),
+    // }));
+    return (dbInstance ??= new DB(
+        filename,
+        app.isPackaged
+            ? {}
+            : {
+                  nativeBinding: path.join(
+                      root,
+                      import.meta.env.VITE_BETTER_SQLITE3_BINDING
+                  ),
+              }
+    ));
 }
 
-export async function setupDatabase(dbInstance: any) {
+export async function setupDatabase(dbInstance: Database.Database) {
     console.log("Setting up database...");
     console.log("App is packaged:", app.isPackaged);
     console.log("User Database Path:", dbPath);
@@ -174,7 +269,7 @@ export async function seedDatabase(db: Database.Database) {
     db.prepare("DELETE FROM personas").run();
 
     // --- STEP 2: INSERT PERSONAS ---
-    const personas = fetchFile("./data/personas.json");
+    const personas = fetchFile("data/personas.json");
     const insertPersona = db.prepare(
         `INSERT INTO personas (id, name, screensaver_path, theme_color) VALUES (?, ?, ?, ?)`
     );
@@ -184,7 +279,7 @@ export async function seedDatabase(db: Database.Database) {
     });
 
     // --- STEP 3: INSERT PRODUCTS ---
-    const allProducts = fetchFile("./data/products.json");
+    const allProducts = fetchFile("data/products.json");
     const insertProduct = db.prepare(
         `INSERT INTO products (id, model_name, persona_id, hero_description, url) VALUES (?, ?, ?, ?, ?)`
     );
@@ -194,7 +289,7 @@ export async function seedDatabase(db: Database.Database) {
     });
 
     // --- STEP 4: INSERT DETAILED SPECS ---
-    const techSpecs = fetchFile("./data/specs.json");
+    const techSpecs = fetchFile("data/specs.json");
     const insertSpec = db.prepare(
         `INSERT INTO product_specs (product_id, label, human_value, tech_value, icon_name) VALUES (?, ?, ?, ?, ?)`
     );
@@ -204,7 +299,7 @@ export async function seedDatabase(db: Database.Database) {
     });
 
     // --- STEP 5: INSERT ONLINE MEDIA LINKS ---
-    const onlineMedia = fetchFile("./data/onlineMedia.json");
+    const onlineMedia = fetchFile("data/onlineMedia.json");
     const insertMedia = db.prepare(
         `INSERT INTO product_media (product_id, media_type, file_path, display_order, is_hero_media) VALUES (?, ?, ?, ?, ?)`
     );
@@ -262,7 +357,7 @@ export interface Product {
     url: string;
 }
 
-export function getProducts(personaId?: string): Product[] {
+export function getProducts(personaId: string | null): Product[] {
     if (!dbInstance) {
         throw new Error("Database not initialized. Call setupDatabase first.");
     }
@@ -410,7 +505,7 @@ export function getRecommendations(answers: Record<string, string>): Product[] {
     }
 
     console.log("Recommended persona: ", bestPersona);
-    const allMatchingProducts = getProducts(bestPersona);
+    const allMatchingProducts = getProducts(bestPersona as string);
     return allMatchingProducts.slice(0, 3);
 }
 

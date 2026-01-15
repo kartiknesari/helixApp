@@ -8,7 +8,9 @@
         "build": "tsc && vite build && electron-builder",
         "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
         "preview": "vite preview",
-        "postinstall": "electron-rebuild -f -w better-sqlite3"
+        "postinstall": "electron-builder install-app-deps",
+        "rebuild": "electron-rebuild -f -w better-sqlite3",
+        "reset-build": "rmdir /s /q dist dist-electron dist-native release"
     },
     "dependencies": {
         "@tailwindcss/vite": "^4.1.18",
@@ -47,12 +49,15 @@
         "appId": "com.helix.app",
         "asar": true,
         "asarUnpack": [
-            "node_modules/better-sqlite3/**/*"
+            "node_modules/better-sqlite3/**/*",
+            "node_modules/bindings/**/*",
+            "node_modules/file-uri-to-path/**/*"
         ],
         "files": [
             "dist/**/*",
             "dist-electron/**/*",
-            "node_modules/**/*"
+            "node_modules/**/*",
+            "src/**/*"
         ],
         "directories": {
             "output": "release"
@@ -65,7 +70,16 @@
         "nsis": {
             "oneClick": false,
             "allowToChangeInstallationDirectory": true
-        }
+        },
+        "extraResources": [
+            {
+                "from": "backend/data",
+                "to": "data",
+                "filter": [
+                    "**/*"
+                ]
+            }
+        ]
     }
 }
 

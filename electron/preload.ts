@@ -26,7 +26,7 @@ contextBridge.exposeInMainWorld("ipcRenderer", {
 });
 
 contextBridge.exposeInMainWorld("database", {
-    getProducts: (personaId?: string) =>
+    getProducts: (personaId: string | null) =>
         ipcRenderer.invoke("get-products", personaId),
 
     getRecommendations: (answers: Record<string, string>) =>

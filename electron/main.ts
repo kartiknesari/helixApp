@@ -1,5 +1,5 @@
 import { app, BrowserWindow, ipcMain } from "electron";
-import { createRequire } from "node:module";
+// import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import {
@@ -11,7 +11,8 @@ import {
     getSqlite3,
 } from "#/model";
 
-const require = createRequire(import.meta.url);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // The built directory structure
@@ -109,7 +110,7 @@ app.whenReady().then(async () => {
     }
 
     // 2. Register API Handlers
-    ipcMain.handle("get-products", (_event, personaId?: string) => {
+    ipcMain.handle("get-products", (_event, personaId: string | null) => {
         try {
             return getProducts(personaId);
         } catch (error) {

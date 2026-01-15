@@ -14,7 +14,7 @@ export interface IElectronAPI {
         width: number;
         height: number;
     }): unknown;
-    getProducts: (personaId?: string) => Promise<Product[]>;
+    getProducts: (personaId: string | null) => Promise<Product[]>;
     getRecommendations: (answers: Record<string, string>) => Promise<Product[]>;
 
     // --- NEW FUNCTION DEFINITION ---
@@ -24,6 +24,7 @@ export interface IElectronAPI {
 
 declare global {
     interface Window {
+        database: IElectronAPI;
         electronAPI: IElectronAPI;
     }
 }

@@ -5,7 +5,7 @@ const root =
     import.meta.env.VITE_COMMAND === "serve"
         ? import.meta.env.VITE_DEV_ROOT
         : path.join(__dirname, "..");
-const TAG = "[better-sqlite3]";
+// const TAG = "[better-sqlite3]";
 let database: Database.Database;
 
 export function getSqlite3(filename: string) {
