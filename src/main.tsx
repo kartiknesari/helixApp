@@ -1,13 +1,13 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./app/App.tsx";
-import { createBrowserRouter } from "react-router";
+import { createHashRouter } from "react-router";
 // import { Route } from "react-router";
 import { RouterProvider } from "react-router";
 import "./index.css";
 import Catalog from "./app/Catalog.tsx";
 
-const route = createBrowserRouter([
+const route = createHashRouter([
     {
         path: "/",
         Component: App,
