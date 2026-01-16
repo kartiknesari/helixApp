@@ -6,6 +6,9 @@ import { createHashRouter } from "react-router";
 import { RouterProvider } from "react-router";
 import "./index.css";
 import Catalog from "./app/Catalog.tsx";
+import Questionnaire from "./app/Questionnaire.tsx";
+import Comparison from "./app/Comparison.tsx";
+import ExperienceLoader from "./app/ExperienceLoader.tsx";
 
 const route = createHashRouter([
     {
@@ -13,6 +16,15 @@ const route = createHashRouter([
         Component: App,
     },
     { path: "/catalog", Component: Catalog },
+    { path: "/recommender", Component: Questionnaire },
+    {
+        path: "/compare",
+        Component: () => <Comparison currentProduct={null} />,
+    },
+    {
+        path: "product/:id",
+        Component: ExperienceLoader,
+    },
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

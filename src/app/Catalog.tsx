@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Product } from "../interfaces/products";
+// import WebViewPage from "@/components/webview/WebComponent";
+// import { X } from "lucide-react";
 
 export default function ProductCatalog() {
     const [products, setProducts] = useState<Product[]>([]);
@@ -136,7 +138,12 @@ export default function ProductCatalog() {
                                         to={`/product/${product.id}`}
                                         className="block w-full"
                                     >
-                                        <button className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold group-hover:bg-blue-600 transition-colors shadow-lg shadow-slate-200">
+                                        <button
+                                            // onClick={() => (
+                                            //     <WebViewPage url={product.url} />
+                                            // )}
+                                            className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold group-hover:bg-blue-600 transition-colors shadow-lg shadow-slate-200"
+                                        >
                                             Explore Experience
                                         </button>
                                     </Link>

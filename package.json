@@ -13,6 +13,8 @@
         "reset-build": "rmdir /s /q dist dist-electron dist-native release"
     },
     "dependencies": {
+        "@radix-ui/react-icons": "^1.3.2",
+        "@radix-ui/react-slot": "^1.2.4",
         "@tailwindcss/vite": "^4.1.18",
         "better-sqlite3": "^12.6.0",
         "class-variance-authority": "^0.7.1",
